@@ -719,3 +719,20 @@
 1608580898 /usr/local/include/opencv4/opencv2/video/background_segm.hpp
 	"opencv2/core.hpp"
 
+1669791099 source:/home/pi/Documents/AGVPanaderia/YoloDetect/yolov4.cpp
+	"net.h"
+	<opencv2/core/core.hpp>
+	<opencv2/highgui/highgui.hpp>
+	<opencv2/imgproc/imgproc.hpp>
+	<iostream>
+	<stdio.h>
+	<vector>
+	"net.h"
+	<fstream>
+	<opencv2/opencv.hpp>
+	<opencv2/core/core.hpp>
+	<opencv2/highgui/highgui.hpp>
+	<opencv2/imgproc/imgproc.hpp>
+	<stdio.h>
+	<vector>
+

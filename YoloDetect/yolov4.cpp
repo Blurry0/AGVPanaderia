@@ -12,7 +12,7 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-//modified 12-31-2021 Q-engineering
+//modified 29-11-2022 Hugo Juarez
 /*
 #include "net.h"
 
@@ -25,7 +25,7 @@
 */
 
 #include "net.h"
-
+#include <fstream>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -37,11 +37,23 @@
 
 ncnn::Net yolov4;
 int target_size;
+int bolillo = 0;
+int concha = 0;
+int dona = 0;
+int oreja= 0;
+int muffin = 0;
+int num_detects=10;
+std::string tipo_pan="Ninguno";
+
+bool ended = false;
+
+
+
 const float mean_vals[3] = {0, 0, 0};
 const float norm_vals[3] = {1 / 255.f, 1 / 255.f, 1 / 255.f};
 
 const char* class_names[] = {"VACIO", "BOLILLO", "CONCHA",
-    "DONA", "NO_BOLILLO", "NO_CONCHA", "NO_DONA","NO_OREJA","NO_PANQUE","OREJA","PANQUE"};
+    "DONA", "NO BOLILLO", "NO CONCHA", "NO DONA","NO OREJA","MUFFIN","OREJA","MUFFIN"};
 
 struct Object
 {
@@ -116,6 +128,68 @@ static void draw_objects(cv::Mat& bgr, const std::vector<Object>& objects)
 
         cv::putText(bgr, text, cv::Point(x, y + label_size.height),
                     cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        if(obj.prob * 100 > 80){
+            std::cout << "Passed Probability" << std::endl;
+            switch(obj.label) {
+      //        const char* class_names[] = {"VACIO", "BOLILLO", "CONCHA",
+    //"DONA", "NO BOLILLO", "CONCHA", "DONA","OREJA","MUFFIN","OREJA","MUFFIN"};
+
+              case 1:
+              case 4:
+                bolillo = bolillo +1;
+                if(bolillo>num_detects){
+                    tipo_pan="Bolillo";
+                    ended=true;
+                    }
+                // code block
+                break;
+
+              case 2:
+              case 5:
+                concha = concha +1;
+                if(concha>num_detects){
+                    tipo_pan="Concha";
+                    ended=true;
+                    }
+                // code block
+                break;
+
+              case 3:
+              case 6:
+                dona = dona+1;
+                if(dona>num_detects){
+                    tipo_pan="Dona";
+                    ended=true;
+                    }
+                // code block
+                break;
+
+              case 7:
+              case 9:
+                oreja=oreja+1;
+                if(oreja>num_detects){
+                    tipo_pan="Orejita";
+                    ended=true;
+                    }
+                // code block
+                break;
+
+              case 8:
+              case 10:
+                muffin=muffin+1;
+                if(muffin>num_detects){
+                    tipo_pan="Muffin";
+                    ended=true;
+                    }
+                // code block
+                break;
+
+              default:
+                // code block
+                break;
+            }
+        }
+
     }
 }
 
@@ -127,34 +201,16 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    //const char* imagepath = argv[1];
 
-    //cv::Mat m = cv::imread(imagepath, 1);
-
-    //int capture_width = 416; //640 ;
-    //int capture_height = 416; //480 ;
-    //int framerate = 15 ;
-    //int display_width =  1280; //640 ;
-    //int display_height = 720; //480;
     cv::Mat m;
     std::chrono::steady_clock::time_point Tbegin, Tend;
     float f;
     float FPS[16];
     int i, Fcnt=0;
 
-    /*
-    if (m.empty())
-    {
-        fprintf(stderr, "cv::imread %s failed\n", imagepath);
-        return -1;
-    }
-*/
-    // original pretrained model from https://github.com/AlexeyAB/darknet
-    // the ncnn model https://drive.google.com/drive/folders/1YzILvh0SKQPS_lrb33dmGNq7aVTKPWS0?usp=sharing
-    // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
 #if YOLOV4_TINY
-    yolov4.load_param("yolov4-tiny-opt.param");
-    yolov4.load_model("yolov4-tiny-opt.bin");
+    yolov4.load_param("/home/pi/Documents/AGVPanaderia/YoloDetect/yolov4-tiny-opt.param");
+    yolov4.load_model("/home/pi/Documents/AGVPanaderia/YoloDetect/yolov4-tiny-opt.bin");
     target_size = 416;
 #else
     yolov4.load_param("yolov4-opt.param");
@@ -187,16 +243,19 @@ int main(int argc, char** argv)
 
         cv::imshow("Yolo4-tiny",m);
         char esc = cv::waitKey(5);
-        if(esc == 27) break;
+        if(ended == true) break;
     }
-    /*
-    std::vector<Object> objects;
-    detect_yolov4(m, objects);
-    draw_objects(m, objects);
 
-    cv::imshow("RPi4 - 1.95 GHz - 2 GB ram",m);
-    */
-//    cv::imwrite("test.jpg",m);
+    std::ofstream MyFile("/home/pi/Documents/AGVPanaderia/YoloDetect/pan_detectado.txt");
 
+  // Write to the file
+    MyFile << tipo_pan;
+
+  // Close the file
+    MyFile.close();
+
+    std::cout<<tipo_pan<<std::endl;
+
+    cap.release();
     return 0;
 }

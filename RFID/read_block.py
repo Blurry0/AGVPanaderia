@@ -3,17 +3,23 @@ import time
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 import RPi.GPIO as GPIO
 from mfrc522 import MFRC522
+import json
 
-with open('num_tienda.txt','r') as reader:
+with open('/home/pi/Documents/AGVPanaderia/RFID/num_tienda.txt','r') as reader:
     num_tienda=reader.read()
 print(int(num_tienda))
 
-with open('num_tienda.txt','w') as writer:
+with open('/home/pi/Documents/AGVPanaderia/RFID/num_tienda.txt','w') as writer:
     if int(num_tienda) < 3:
         writer.write(str(int(num_tienda)+1))
     else:
         writer.write('1')
+
+with open('/home/pi/Documents/AGVPanaderia/YoloDetect/pan_detectado.txt','r') as reader:
+    pan_detectado_camara=reader.read()
     
+print(pan_detectado_camara)
+
 continue_reading = True
 
 # This is the default key for authentication
@@ -33,7 +39,7 @@ print("Acerque el tag al lector")
 
 # This loop keeps checking for chips. If one is near it will get the UID and authenticate
 while continue_reading:
-    json=[]
+    lectura=[]
     # Scan for cards    
     (status,TagType) = MIFAREReader.MFRC522_Request(MIFAREReader.PICC_REQIDL)
 
@@ -71,32 +77,32 @@ while continue_reading:
                     print("dato")
                     
                     backdata = "".join([chr(i) for i in backdata if i!=ord(' ')])
-                    json.append(backdata)
+                    lectura.append(backdata)
                    
                 else:
                     print("dato_vacio")
                     print("¡No se pudo leer el bloque!")
                 
                     # Make sure to stop reading for cards
-                if len(json)>=12:
+                if len(lectura)>=12:
                     continue_reading = False
                     GPIO.cleanup()
                 
             else:
                 print("¡Error de autentificación!")
                 
-print(json)
-print(len(json))
-json=''.join(json)
-json=json.split('}')
+print(lectura)
+print(len(lectura))
+lectura=''.join(lectura)
+lectura=lectura.split('}')
 
 
 myMQTTClient = AWSIoTMQTTClient('Prueba') #Genera una llave aleatoria
 
 
-Root_CA = "./Certificates/root-ca.pem"
-Private_Key = "./Certificates/private.pem.key"
-Certificate = "./Certificates/certificate.pem.crt"
+Root_CA = "/home/pi/Documents/AGVPanaderia/RFID/Certificates/root-ca.pem"
+Private_Key = "/home/pi/Documents/AGVPanaderia/RFID/Certificates/private.pem.key"
+Certificate = "/home/pi/Documents/AGVPanaderia/RFID/Certificates/certificate.pem.crt"
 
 myMQTTClient.configureEndpoint("a1bo3h1pmj4c6m-ats.iot.us-east-2.amazonaws.com", 8883)
 
@@ -113,12 +119,23 @@ print ('Initiating Realtime Data Transfer From Raspberry Pi...')
 myMQTTClient.connect()
 print("Publishing Message From Raspberry Pi")
 sjson='{"Compras":['
-for obj in json[:-1]:
+for obj in lectura[:-1]:
     sjson+=obj+'},'
+
 sjson=sjson[:-1] + ']'',"Tienda":'+str(num_tienda)+'}'
+print(sjson)
+diccionario = json.loads(sjson)
+print(diccionario)
+pan_in_json=False
+for pan in diccionario["Compras"]:
+    if pan_detectado_camara==pan["Pan"]:
+        pan_in_json=True
+        break
+    
+print(pan_in_json)
 myMQTTClient.publish(
-        topic="iot/Pan",
-        QoS = 1,
-        payload=sjson
-    )
+         topic="iot/Pan",
+         QoS = 1,
+         payload=sjson
+     )
 print(sjson)

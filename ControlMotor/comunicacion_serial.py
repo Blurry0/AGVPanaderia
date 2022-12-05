@@ -2,40 +2,36 @@ import serial
 from time import sleep
 import numpy as np
 import struct
+import paho.mqtt.client as mqtt
 
-class SerialCommunication:
-    
-    bytes_array = []
-    decoded_bytes=[]
-    
-    def __init__(self,port="/dev/ttyS0",
-                 baud_rate=115200,
-                 timeout=1):
-        
-        self.ser = serial.Serial(port,baud_rate,timeout=timeout)
-        self.ser.reset_input_buffer()
 
-    
-            
-    def sendMotorDataToArduino(self):
-        print("Sending")
-        entero=0
-        self.ser.write(entero.to_bytes(1, 'little'))
-        #self.ser.write(0b00000011)
+# The callback for when the client receives a CONNACK response from the server.
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code "+str(rc))
+    client.subscribe("AGV/Motores")
 
-if __name__ == "__main__":
-    ser=SerialCommunication()
-    while True:
-        ser.sendMotorDataToArduino()
-    
+# The callback for when a PUBLISH message is received from the server.
+def on_message(client, userdata, msg):
+    print(msg.topic+" "+str(msg.payload))
+    if msg.payload==b"Stop":
+        client.publish(topic="Camara/Deteccion",payload="Stop", qos=1)
+        client.publish(topic="Fin",payload="Motores Terminaron", qos=1)
+        client.disconnect()
+    else:
+        entero=int(msg.payload)
+        print(entero)
+        ser = serial.Serial('/dev/ttyS0',115200,timeout=1)
+        ser.write(entero.to_bytes(1, 'little'))
 
-#     
-#     while True:
-#         if ser.state == ser.WAITING:
-#             ser.waitingIniByte()
-#             
-#         elif ser.state ==ser.READING:
-#             ser.readingTill16BytesRead()
-#             
-#         elif ser.state == ser.VALIDATING:
-#             ser.checkingIfBufferIsValid()
+def main():
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.connect("192.168.137.1", 1883, 60)
+
+
+    client.loop_forever()
+    
+main()
+    
